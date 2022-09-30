@@ -198,7 +198,7 @@ public sealed class SerialPort : IDisposable
     public bool TxWhenRxXoff { get; set; } = true;
 
     /// <summary>
-    ///     Specidies the use to which the DTR output is put (default: none)
+    ///     Specifies the use to which the DTR output is put (default: none)
     /// </summary>
     [UsedImplicitly]
     public HsOutput UseDtr { get; set; } = HsOutput.None;
