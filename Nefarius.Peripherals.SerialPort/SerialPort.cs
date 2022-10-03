@@ -365,7 +365,7 @@ namespace Nefarius.Peripherals.SerialPort
             commTimeouts.ReadTotalTimeoutMultiplier = 0;
             commTimeouts.WriteTotalTimeoutConstant = SendTimeoutConstant;
             commTimeouts.WriteTotalTimeoutMultiplier = SendTimeoutMultiplier;
-            portDcb.Init(Parity == Parity.Odd || Parity == Parity.Even, TxFlowCts, TxFlowDsr,
+            portDcb.Init(Parity is Parity.Odd or Parity.Even, TxFlowCts, TxFlowDsr,
                 (int) UseDtr, RxGateDsr, !TxWhenRxXoff, TxFlowX, RxFlowX, (int) UseRts);
             portDcb.BaudRate = BaudRate;
             portDcb.ByteSize = (byte) DataBits;
