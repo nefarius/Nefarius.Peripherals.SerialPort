@@ -12,8 +12,7 @@ using Nefarius.Peripherals.SerialPort.Win32PInvoke;
 namespace Nefarius.Peripherals.SerialPort;
 
 /// <summary>
-///     PInvokeSerialPort main class.
-///     Borrowed from http://msdn.microsoft.com/en-us/magazine/cc301786.aspx ;)
+///     Wrapper class around a serial (COM, RS-232) port.
 /// </summary>
 public partial class SerialPort : IDisposable
 {
@@ -32,7 +31,7 @@ public partial class SerialPort : IDisposable
     private int _stateDtr = 2;
     private int _stateRts = 2;
     private int _writeCount;
-    
+
     /// <summary>
     ///     Class constructor
     /// </summary>
@@ -324,7 +323,7 @@ public partial class SerialPort : IDisposable
         if (!Win32Com.GetCommModemStatus(_hPort.DangerousGetHandle(), out f)) ThrowException("Unexpected failure");
         return new ModemStatus(f);
     }
-    
+
     /// <summary>
     ///     Get the status of the queues
     /// </summary>
@@ -415,29 +414,28 @@ public partial class SerialPort : IDisposable
 
     private unsafe void ReceiveThread()
     {
-        var buf = new byte[1];
+        var buf = stackalloc byte[1];
 
         var sg = new AutoResetEvent(false);
-        var ov = new OVERLAPPED();
-        var unmanagedOv = Marshal.AllocHGlobal(Marshal.SizeOf(ov));
-        ov.Offset = 0;
-        ov.OffsetHigh = 0;
-        ov.hEvent = sg.SafeWaitHandle.DangerousGetHandle();
-        Marshal.StructureToPtr(ov, unmanagedOv, true);
+        var ov = new NativeOverlapped
+        {
+            EventHandle = sg.SafeWaitHandle.DangerousGetHandle()
+        };
 
-        uint eventMask = 0;
-        var uMask = Marshal.AllocHGlobal(Marshal.SizeOf(eventMask));
+        COMM_EVENT_MASK eventMask = 0;
 
         try
         {
             while (true)
             {
-                if (!Win32Com.SetCommMask(_hPort.DangerousGetHandle(),
-                        Win32Com.EV_RXCHAR | Win32Com.EV_TXEMPTY | Win32Com.EV_CTS | Win32Com.EV_DSR
-                        | Win32Com.EV_BREAK | Win32Com.EV_RLSD | Win32Com.EV_RING | Win32Com.EV_ERR))
+                if (!PInvoke.SetCommMask(_hPort,
+                        COMM_EVENT_MASK.EV_RXCHAR | COMM_EVENT_MASK.EV_TXEMPTY | COMM_EVENT_MASK.EV_CTS |
+                        COMM_EVENT_MASK.EV_DSR
+                        | COMM_EVENT_MASK.EV_BREAK | COMM_EVENT_MASK.EV_RLSD | COMM_EVENT_MASK.EV_RING |
+                        COMM_EVENT_MASK.EV_ERR))
                     throw new CommPortException("IO Error [001]");
-                Marshal.WriteInt32(uMask, 0);
-                if (!Win32Com.WaitCommEvent(_hPort.DangerousGetHandle(), uMask, unmanagedOv))
+
+                if (!PInvoke.WaitCommEvent(_hPort, ref eventMask, &ov))
                 {
                     if (Marshal.GetLastWin32Error() == (int)WIN32_ERROR.ERROR_IO_PENDING)
                         sg.WaitOne();
@@ -445,8 +443,7 @@ public partial class SerialPort : IDisposable
                         throw new CommPortException("IO Error [002]");
                 }
 
-                eventMask = (uint)Marshal.ReadInt32(uMask);
-                if ((eventMask & Win32Com.EV_ERR) != 0)
+                if ((eventMask & COMM_EVENT_MASK.EV_ERR) != 0)
                 {
                     CLEAR_COMM_ERROR_FLAGS errs;
                     if (PInvoke.ClearCommError(_hPort, &errs, null))
@@ -465,12 +462,12 @@ public partial class SerialPort : IDisposable
                     throw new CommPortException("IO Error [003]");
                 }
 
-                if ((eventMask & Win32Com.EV_RXCHAR) != 0)
+                if ((eventMask & COMM_EVENT_MASK.EV_RXCHAR) != 0)
                 {
                     uint gotbytes;
                     do
                     {
-                        if (!Win32Com.ReadFile(_hPort.DangerousGetHandle(), buf, 1, out gotbytes, unmanagedOv))
+                        if (!PInvoke.ReadFile(_hPort, buf, 1, &gotbytes, &ov))
                         {
                             if (Marshal.GetLastWin32Error() == (int)WIN32_ERROR.ERROR_IO_PENDING)
                             {
@@ -487,14 +484,14 @@ public partial class SerialPort : IDisposable
                     } while (gotbytes > 0);
                 }
 
-                if ((eventMask & Win32Com.EV_TXEMPTY) != 0) OnTxDone();
-                if ((eventMask & Win32Com.EV_BREAK) != 0) OnBreak();
+                if ((eventMask & COMM_EVENT_MASK.EV_TXEMPTY) != 0) OnTxDone();
+                if ((eventMask & COMM_EVENT_MASK.EV_BREAK) != 0) OnBreak();
 
                 uint i = 0;
-                if ((eventMask & Win32Com.EV_CTS) != 0) i |= Win32Com.MS_CTS_ON;
-                if ((eventMask & Win32Com.EV_DSR) != 0) i |= Win32Com.MS_DSR_ON;
-                if ((eventMask & Win32Com.EV_RLSD) != 0) i |= Win32Com.MS_RLSD_ON;
-                if ((eventMask & Win32Com.EV_RING) != 0) i |= Win32Com.MS_RING_ON;
+                if ((eventMask & COMM_EVENT_MASK.EV_CTS) != 0) i |= Win32Com.MS_CTS_ON;
+                if ((eventMask & COMM_EVENT_MASK.EV_DSR) != 0) i |= Win32Com.MS_DSR_ON;
+                if ((eventMask & COMM_EVENT_MASK.EV_RLSD) != 0) i |= Win32Com.MS_RLSD_ON;
+                if ((eventMask & COMM_EVENT_MASK.EV_RING) != 0) i |= Win32Com.MS_RING_ON;
                 if (i != 0)
                 {
                     uint f;
@@ -506,8 +503,6 @@ public partial class SerialPort : IDisposable
         }
         catch (Exception e)
         {
-            if (uMask != IntPtr.Zero) Marshal.FreeHGlobal(uMask);
-            if (unmanagedOv != IntPtr.Zero) Marshal.FreeHGlobal(unmanagedOv);
             if (!(e is ThreadAbortException))
             {
                 _rxException = e;
