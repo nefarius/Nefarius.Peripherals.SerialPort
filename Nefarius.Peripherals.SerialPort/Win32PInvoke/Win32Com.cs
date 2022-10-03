@@ -5,9 +5,6 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
 {
     internal class Win32Com
     {
-        //Constants for errors:
-        internal const UInt32 ERROR_ACCESS_DENIED = 5;
-        internal const UInt32 ERROR_IO_PENDING = 997;
 
         [DllImport("kernel32.dll")]
         internal static extern Boolean GetHandleInformation(IntPtr hObject, out UInt32 lpdwFlags);

@@ -43,7 +43,7 @@ public class SerialPort : IDisposable
 
         if (_hPort.IsInvalid)
         {
-            if (Marshal.GetLastWin32Error() == Win32Com.ERROR_ACCESS_DENIED) return false;
+            if (Marshal.GetLastWin32Error() == (int)WIN32_ERROR.ERROR_ACCESS_DENIED) return false;
             throw new CommPortException("Port Open Failure");
         }
 
@@ -210,7 +210,8 @@ public class SerialPort : IDisposable
             }
             else
             {
-                if (Marshal.GetLastWin32Error() != Win32Com.ERROR_IO_PENDING) ThrowException("Unexpected failure");
+                if (Marshal.GetLastWin32Error() != (int)WIN32_ERROR.ERROR_IO_PENDING) 
+                    ThrowException("Unexpected failure");
             }
         }
     }
@@ -263,7 +264,7 @@ public class SerialPort : IDisposable
         }
         else
         {
-            if (Marshal.GetLastWin32Error() != Win32Com.ERROR_IO_PENDING) ThrowException("Unexpected failure");
+            if (Marshal.GetLastWin32Error() != (int)WIN32_ERROR.ERROR_IO_PENDING) ThrowException("Unexpected failure");
         }
     }
 
@@ -406,7 +407,7 @@ public class SerialPort : IDisposable
                 Marshal.WriteInt32(uMask, 0);
                 if (!Win32Com.WaitCommEvent(_hPort.DangerousGetHandle(), uMask, unmanagedOv))
                 {
-                    if (Marshal.GetLastWin32Error() == Win32Com.ERROR_IO_PENDING)
+                    if (Marshal.GetLastWin32Error() == (int)WIN32_ERROR.ERROR_IO_PENDING)
                         sg.WaitOne();
                     else
                         throw new CommPortException("IO Error [002]");
@@ -425,7 +426,7 @@ public class SerialPort : IDisposable
                         if (((uint)errs & Win32Com.CE_RXOVER) != 0) s = s.Append("Receive Overflow,");
                         if (((uint)errs & Win32Com.CE_RXPARITY) != 0) s = s.Append("Parity,");
                         if (((uint)errs & Win32Com.CE_TXFULL) != 0) s = s.Append("Transmit Overflow,");
-                        s.Length = s.Length - 1;
+                        s.Length -= 1;
                         throw new CommPortException(s.ToString());
                     }
 
@@ -439,7 +440,7 @@ public class SerialPort : IDisposable
                     {
                         if (!Win32Com.ReadFile(_hPort.DangerousGetHandle(), buf, 1, out gotbytes, unmanagedOv))
                         {
-                            if (Marshal.GetLastWin32Error() == Win32Com.ERROR_IO_PENDING)
+                            if (Marshal.GetLastWin32Error() == (int)WIN32_ERROR.ERROR_IO_PENDING)
                             {
                                 Win32Com.CancelIo(_hPort.DangerousGetHandle());
                                 gotbytes = 0;
