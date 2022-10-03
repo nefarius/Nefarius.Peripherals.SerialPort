@@ -1,4 +1,4 @@
-﻿CreateFile
+﻿﻿CreateFile
 GetHandleInformation
 SetCommState
 SetCommTimeouts
@@ -14,3 +14,4 @@ GetCommModemStatus
 GetOverlappedResult
 ClearCommError
 GetCommProperties
+WIN32_ERROR
