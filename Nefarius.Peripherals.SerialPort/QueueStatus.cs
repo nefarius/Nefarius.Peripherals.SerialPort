@@ -23,35 +23,43 @@ namespace Nefarius.Peripherals.SerialPort
             _outQueueSize = outQs;
         }
 
+        internal const uint fCtsHold = 0x1;
+        internal const uint fDsrHold = 0x2;
+        internal const uint fRlsdHold = 0x4;
+        internal const uint fXoffHold = 0x8;
+        internal const uint fXoffSent = 0x10;
+        internal const uint fEof = 0x20;
+        internal const uint fTxim = 0x40;
+
         /// <summary>
         ///     Output is blocked by CTS handshaking.
         /// </summary>
-        public bool CtsHold => (_status & COMSTAT.fCtsHold) != 0;
+        public bool CtsHold => (_status & fCtsHold) != 0;
 
         /// <summary>
         ///     Output is blocked by DRS handshaking.
         /// </summary>
-        public bool DsrHold => (_status & COMSTAT.fDsrHold) != 0;
+        public bool DsrHold => (_status & fDsrHold) != 0;
 
         /// <summary>
         ///     Output is blocked by RLSD handshaking.
         /// </summary>
-        public bool RlsdHold => (_status & COMSTAT.fRlsdHold) != 0;
+        public bool RlsdHold => (_status & fRlsdHold) != 0;
 
         /// <summary>
         ///     Output is blocked because software handshaking is enabled and XOFF was received.
         /// </summary>
-        public bool XoffHold => (_status & COMSTAT.fXoffHold) != 0;
+        public bool XoffHold => (_status & fXoffHold) != 0;
 
         /// <summary>
         ///     Output was blocked because XOFF was sent and this station is not yet ready to receive.
         /// </summary>
-        public bool XoffSent => (_status & COMSTAT.fXoffSent) != 0;
+        public bool XoffSent => (_status & fXoffSent) != 0;
 
         /// <summary>
         ///     There is a character waiting for transmission in the immediate buffer.
         /// </summary>
-        public bool ImmediateWaiting => (_status & COMSTAT.fTxim) != 0;
+        public bool ImmediateWaiting => (_status & fTxim) != 0;
 
         /// <summary>
         ///     Number of bytes waiting in the input queue.

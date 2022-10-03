@@ -9,7 +9,6 @@ using Windows.Win32.Storage.FileSystem;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Peripherals.SerialPort.Win32PInvoke;
 using COMMPROP = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMPROP;
-using COMSTAT = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMSTAT;
 
 namespace Nefarius.Peripherals.SerialPort;
 
@@ -298,16 +297,20 @@ public class SerialPort : IDisposable
     ///     Get the status of the queues
     /// </summary>
     /// <returns>Queue status object</returns>
-    protected QueueStatus GetQueueStatus()
+    protected unsafe QueueStatus GetQueueStatus()
     {
         COMSTAT cs;
         COMMPROP cp;
-        uint er;
+        CLEAR_COMM_ERROR_FLAGS er;
 
         CheckOnline();
-        if (!Win32Com.ClearCommError(_hPort.DangerousGetHandle(), out er, out cs)) ThrowException("Unexpected failure");
-        if (!Win32Com.GetCommProperties(_hPort.DangerousGetHandle(), out cp)) ThrowException("Unexpected failure");
-        return new QueueStatus(cs.Flags, cs.cbInQue, cs.cbOutQue, cp.dwCurrentRxQueue, cp.dwCurrentTxQueue);
+        if (!PInvoke.ClearCommError(_hPort, &er, &cs))
+            ThrowException("Unexpected failure");
+
+        if (!Win32Com.GetCommProperties(_hPort.DangerousGetHandle(), out cp))
+            ThrowException("Unexpected failure");
+
+        return new QueueStatus(cs._bitfield, cs.cbInQue, cs.cbOutQue, cp.dwCurrentRxQueue, cp.dwCurrentTxQueue);
     }
 
     /// <summary>
@@ -378,7 +381,7 @@ public class SerialPort : IDisposable
     {
     }
 
-    private void ReceiveThread()
+    private unsafe void ReceiveThread()
     {
         var buf = new byte[1];
 
@@ -413,16 +416,16 @@ public class SerialPort : IDisposable
                 eventMask = (uint)Marshal.ReadInt32(uMask);
                 if ((eventMask & Win32Com.EV_ERR) != 0)
                 {
-                    uint errs;
-                    if (Win32Com.ClearCommError(_hPort.DangerousGetHandle(), out errs, IntPtr.Zero))
+                    CLEAR_COMM_ERROR_FLAGS errs;
+                    if (PInvoke.ClearCommError(_hPort, &errs, null))
                     {
                         var s = new StringBuilder("UART Error: ", 40);
-                        if ((errs & Win32Com.CE_FRAME) != 0) s = s.Append("Framing,");
-                        if ((errs & Win32Com.CE_IOE) != 0) s = s.Append("IO,");
-                        if ((errs & Win32Com.CE_OVERRUN) != 0) s = s.Append("Overrun,");
-                        if ((errs & Win32Com.CE_RXOVER) != 0) s = s.Append("Receive Overflow,");
-                        if ((errs & Win32Com.CE_RXPARITY) != 0) s = s.Append("Parity,");
-                        if ((errs & Win32Com.CE_TXFULL) != 0) s = s.Append("Transmit Overflow,");
+                        if (((uint)errs & Win32Com.CE_FRAME) != 0) s = s.Append("Framing,");
+                        if (((uint)errs & Win32Com.CE_IOE) != 0) s = s.Append("IO,");
+                        if (((uint)errs & Win32Com.CE_OVERRUN) != 0) s = s.Append("Overrun,");
+                        if (((uint)errs & Win32Com.CE_RXOVER) != 0) s = s.Append("Receive Overflow,");
+                        if (((uint)errs & Win32Com.CE_RXPARITY) != 0) s = s.Append("Parity,");
+                        if (((uint)errs & Win32Com.CE_TXFULL) != 0) s = s.Append("Transmit Overflow,");
                         s.Length = s.Length - 1;
                         throw new CommPortException(s.ToString());
                     }

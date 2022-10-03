@@ -88,11 +88,6 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
         internal static extern Boolean GetOverlappedResult(IntPtr hFile, IntPtr lpOverlapped,
                                                            out UInt32 nNumberOfBytesTransferred, Boolean bWait);
 
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean ClearCommError(IntPtr hFile, out UInt32 lpErrors, IntPtr lpStat);
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean ClearCommError(IntPtr hFile, out UInt32 lpErrors, out COMSTAT cs);
-
         //Constants for lpErrors:
         internal const UInt32 CE_RXOVER = 0x0001;
         internal const UInt32 CE_OVERRUN = 0x0002;
