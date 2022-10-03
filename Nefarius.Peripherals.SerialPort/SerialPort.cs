@@ -8,7 +8,6 @@ using Windows.Win32.Foundation;
 using Windows.Win32.Storage.FileSystem;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Peripherals.SerialPort.Win32PInvoke;
-using COMMPROP = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMPROP;
 
 namespace Nefarius.Peripherals.SerialPort;
 
@@ -300,14 +299,14 @@ public class SerialPort : IDisposable
     protected unsafe QueueStatus GetQueueStatus()
     {
         COMSTAT cs;
-        COMMPROP cp;
+        var cp = new COMMPROP();
         CLEAR_COMM_ERROR_FLAGS er;
 
         CheckOnline();
         if (!PInvoke.ClearCommError(_hPort, &er, &cs))
             ThrowException("Unexpected failure");
 
-        if (!Win32Com.GetCommProperties(_hPort.DangerousGetHandle(), out cp))
+        if (!PInvoke.GetCommProperties(_hPort, ref cp))
             ThrowException("Unexpected failure");
 
         return new QueueStatus(cs._bitfield, cs.cbInQue, cs.cbOutQue, cp.dwCurrentRxQueue, cp.dwCurrentTxQueue);

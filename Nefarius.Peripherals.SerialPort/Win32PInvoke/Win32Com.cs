@@ -12,18 +12,7 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
         [DllImport("kernel32.dll")]
         internal static extern Boolean GetHandleInformation(IntPtr hObject, out UInt32 lpdwFlags);
 
-
-        /// <summary>
-        /// Manipulating the communications settings.
-        /// </summary>
         
-        /// <summary>
-        /// Reading and writing.
-        /// </summary>
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern Boolean WriteFile(IntPtr fFile, Byte[] lpBuffer, UInt32 nNumberOfBytesToWrite,
-                                                 out UInt32 lpNumberOfBytesWritten, IntPtr lpOverlapped);
-
         [DllImport("kernel32.dll")]
         internal static extern Boolean SetCommMask(IntPtr hFile, UInt32 dwEvtMask);
 
@@ -100,7 +89,6 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
         internal const UInt32 CE_DNS = 0x0800;
         internal const UInt32 CE_OOP = 0x1000;
         internal const UInt32 CE_MODE = 0x8000;
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean GetCommProperties(IntPtr hFile, out COMMPROP cp);
+        
     }
 }
