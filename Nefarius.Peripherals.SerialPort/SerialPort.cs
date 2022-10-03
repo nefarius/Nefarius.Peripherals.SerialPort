@@ -375,11 +375,16 @@ namespace Nefarius.Peripherals.SerialPort
             portDcb.XonChar = (byte) XonChar;
             portDcb.XoffLim = (short) RxHighWater;
             portDcb.XonLim = (short) RxLowWater;
+
             if (RxQueue != 0 || TxQueue != 0)
                 if (!Win32Com.SetupComm(_hPort.DangerousGetHandle(), (uint) RxQueue, (uint) TxQueue))
                     ThrowException("Bad queue settings");
-            if (!Win32Com.SetCommState(_hPort.DangerousGetHandle(), ref portDcb)) ThrowException("Bad com settings");
-            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts)) ThrowException("Bad timeout settings");
+            
+            if (!Win32Com.SetCommState(_hPort.DangerousGetHandle(), ref portDcb)) 
+                ThrowException("Bad com settings");
+            
+            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts)) 
+                ThrowException("Bad timeout settings");
 
             _stateBrk = 0;
             switch (UseDtr)
