@@ -33,28 +33,13 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
         internal const UInt32 GENERIC_WRITE = 0x40000000;
 
         [DllImport("kernel32.dll")]
-        internal static extern Boolean CloseHandle(IntPtr hObject);
-
-        [DllImport("kernel32.dll")]
         internal static extern Boolean GetHandleInformation(IntPtr hObject, out UInt32 lpdwFlags);
 
 
         /// <summary>
         /// Manipulating the communications settings.
         /// </summary>
-
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean GetCommState(IntPtr hFile, ref DCB lpDCB);
-
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean GetCommTimeouts(IntPtr hFile, out COMMTIMEOUTS lpCommTimeouts);
-
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean BuildCommDCBAndTimeouts(String lpDef, ref DCB lpDCB, ref COMMTIMEOUTS lpCommTimeouts);
-
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean SetCommState(IntPtr hFile, [In] ref DCB lpDCB);
-
+        
         [DllImport("kernel32.dll")]
         internal static extern Boolean SetCommTimeouts(IntPtr hFile, [In] ref COMMTIMEOUTS lpCommTimeouts);
 
