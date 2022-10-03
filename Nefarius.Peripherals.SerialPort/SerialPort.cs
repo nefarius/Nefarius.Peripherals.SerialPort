@@ -2,6 +2,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Windows.Win32;
+using Windows.Win32.Storage.FileSystem;
+using Microsoft.Win32.SafeHandles;
 using Nefarius.Peripherals.SerialPort.Win32PInvoke;
 
 namespace Nefarius.Peripherals.SerialPort
@@ -19,7 +22,7 @@ namespace Nefarius.Peripherals.SerialPort
         private bool _checkSends = true;
 
         private Handshake _handShake;
-        private IntPtr _hPort;
+        private SafeFileHandle _hPort;
         private bool _online;
         private IntPtr _ptrUwo = IntPtr.Zero;
         private Exception _rxException;
@@ -188,14 +191,14 @@ namespace Nefarius.Peripherals.SerialPort
                 CheckOnline();
                 if (value)
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.SETRTS))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.SETRTS))
                         _stateRts = 1;
                     else
                         ThrowException("Unexpected Failure");
                 }
                 else
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.CLRRTS))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.CLRRTS))
                         _stateRts = 1;
                     else
                         ThrowException("Unexpected Failure");
@@ -220,14 +223,14 @@ namespace Nefarius.Peripherals.SerialPort
                 CheckOnline();
                 if (value)
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.SETDTR))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.SETDTR))
                         _stateDtr = 1;
                     else
                         ThrowException("Unexpected Failure");
                 }
                 else
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.CLRDTR))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.CLRDTR))
                         _stateDtr = 0;
                     else
                         ThrowException("Unexpected Failure");
@@ -247,14 +250,14 @@ namespace Nefarius.Peripherals.SerialPort
                 CheckOnline();
                 if (value)
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.SETBREAK))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.SETBREAK))
                         _stateBrk = 0;
                     else
                         ThrowException("Unexpected Failure");
                 }
                 else
                 {
-                    if (Win32Com.EscapeCommFunction(_hPort, Win32Com.CLRBREAK))
+                    if (Win32Com.EscapeCommFunction(_hPort.DangerousGetHandle(), Win32Com.CLRBREAK))
                         _stateBrk = 0;
                     else
                         ThrowException("Unexpected Failure");
@@ -345,10 +348,11 @@ namespace Nefarius.Peripherals.SerialPort
             var wo = new OVERLAPPED();
 
             if (_online) return false;
+            
+            _hPort = PInvoke.CreateFile(PortName, FILE_ACCESS_FLAGS.FILE_GENERIC_READ | FILE_ACCESS_FLAGS.FILE_GENERIC_WRITE, 0,
+                null, FILE_CREATION_DISPOSITION.OPEN_EXISTING, FILE_FLAGS_AND_ATTRIBUTES.FILE_FLAG_OVERLAPPED, null);
 
-            _hPort = Win32Com.CreateFile(PortName, Win32Com.GENERIC_READ | Win32Com.GENERIC_WRITE, 0, IntPtr.Zero,
-                Win32Com.OPEN_EXISTING, Win32Com.FILE_FLAG_OVERLAPPED, IntPtr.Zero);
-            if (_hPort == (IntPtr) Win32Com.INVALID_HANDLE_VALUE)
+            if (_hPort.IsInvalid)
             {
                 if (Marshal.GetLastWin32Error() == Win32Com.ERROR_ACCESS_DENIED) return false;
                 throw new CommPortException("Port Open Failure");
@@ -372,10 +376,10 @@ namespace Nefarius.Peripherals.SerialPort
             portDcb.XoffLim = (short) RxHighWater;
             portDcb.XonLim = (short) RxLowWater;
             if (RxQueue != 0 || TxQueue != 0)
-                if (!Win32Com.SetupComm(_hPort, (uint) RxQueue, (uint) TxQueue))
+                if (!Win32Com.SetupComm(_hPort.DangerousGetHandle(), (uint) RxQueue, (uint) TxQueue))
                     ThrowException("Bad queue settings");
-            if (!Win32Com.SetCommState(_hPort, ref portDcb)) ThrowException("Bad com settings");
-            if (!Win32Com.SetCommTimeouts(_hPort, ref commTimeouts)) ThrowException("Bad timeout settings");
+            if (!Win32Com.SetCommState(_hPort.DangerousGetHandle(), ref portDcb)) ThrowException("Bad com settings");
+            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts)) ThrowException("Bad timeout settings");
 
             _stateBrk = 0;
             switch (UseDtr)
@@ -445,14 +449,14 @@ namespace Nefarius.Peripherals.SerialPort
 
         private void InternalClose()
         {
-            Win32Com.CancelIo(_hPort);
+            Win32Com.CancelIo(_hPort.DangerousGetHandle());
             if (_rxThread != null)
             {
                 _rxThread.Abort();
                 _rxThread = null;
             }
 
-            Win32Com.CloseHandle(_hPort);
+            _hPort.Dispose();
             if (_ptrUwo != IntPtr.Zero) Marshal.FreeHGlobal(_ptrUwo);
             _stateRts = 2;
             _stateDtr = 2;
@@ -505,7 +509,7 @@ namespace Nefarius.Peripherals.SerialPort
             CheckOnline();
             CheckResult();
             _writeCount = toSend.GetLength(0);
-            if (Win32Com.WriteFile(_hPort, toSend, (uint) _writeCount, out sent, _ptrUwo))
+            if (Win32Com.WriteFile(_hPort.DangerousGetHandle(), toSend, (uint) _writeCount, out sent, _ptrUwo))
             {
                 _writeCount -= (int) sent;
             }
@@ -557,7 +561,7 @@ namespace Nefarius.Peripherals.SerialPort
         {
             if (_writeCount <= 0) return;
             uint sent;
-            if (Win32Com.GetOverlappedResult(_hPort, _ptrUwo, out sent, _checkSends))
+            if (Win32Com.GetOverlappedResult(_hPort.DangerousGetHandle(), _ptrUwo, out sent, _checkSends))
             {
                 _writeCount -= (int) sent;
                 if (_writeCount != 0) ThrowException("Send Timeout");
@@ -576,7 +580,7 @@ namespace Nefarius.Peripherals.SerialPort
         public void SendImmediate(byte tosend)
         {
             CheckOnline();
-            if (!Win32Com.TransmitCommChar(_hPort, tosend)) ThrowException("Transmission failure");
+            if (!Win32Com.TransmitCommChar(_hPort.DangerousGetHandle(), tosend)) ThrowException("Transmission failure");
         }
 
         /// <summary>
@@ -588,7 +592,7 @@ namespace Nefarius.Peripherals.SerialPort
             uint f;
 
             CheckOnline();
-            if (!Win32Com.GetCommModemStatus(_hPort, out f)) ThrowException("Unexpected failure");
+            if (!Win32Com.GetCommModemStatus(_hPort.DangerousGetHandle(), out f)) ThrowException("Unexpected failure");
             return new ModemStatus(f);
         }
 
@@ -604,8 +608,8 @@ namespace Nefarius.Peripherals.SerialPort
             uint er;
 
             CheckOnline();
-            if (!Win32Com.ClearCommError(_hPort, out er, out cs)) ThrowException("Unexpected failure");
-            if (!Win32Com.GetCommProperties(_hPort, out cp)) ThrowException("Unexpected failure");
+            if (!Win32Com.ClearCommError(_hPort.DangerousGetHandle(), out er, out cs)) ThrowException("Unexpected failure");
+            if (!Win32Com.GetCommProperties(_hPort.DangerousGetHandle(), out cp)) ThrowException("Unexpected failure");
             return new QueueStatus(cs.Flags, cs.cbInQue, cs.cbOutQue, cp.dwCurrentRxQueue, cp.dwCurrentTxQueue);
         }
 
@@ -696,12 +700,12 @@ namespace Nefarius.Peripherals.SerialPort
             {
                 while (true)
                 {
-                    if (!Win32Com.SetCommMask(_hPort,
+                    if (!Win32Com.SetCommMask(_hPort.DangerousGetHandle(),
                         Win32Com.EV_RXCHAR | Win32Com.EV_TXEMPTY | Win32Com.EV_CTS | Win32Com.EV_DSR
                         | Win32Com.EV_BREAK | Win32Com.EV_RLSD | Win32Com.EV_RING | Win32Com.EV_ERR))
                         throw new CommPortException("IO Error [001]");
                     Marshal.WriteInt32(uMask, 0);
-                    if (!Win32Com.WaitCommEvent(_hPort, uMask, unmanagedOv))
+                    if (!Win32Com.WaitCommEvent(_hPort.DangerousGetHandle(), uMask, unmanagedOv))
                     {
                         if (Marshal.GetLastWin32Error() == Win32Com.ERROR_IO_PENDING)
                             sg.WaitOne();
@@ -713,7 +717,7 @@ namespace Nefarius.Peripherals.SerialPort
                     if ((eventMask & Win32Com.EV_ERR) != 0)
                     {
                         uint errs;
-                        if (Win32Com.ClearCommError(_hPort, out errs, IntPtr.Zero))
+                        if (Win32Com.ClearCommError(_hPort.DangerousGetHandle(), out errs, IntPtr.Zero))
                         {
                             var s = new StringBuilder("UART Error: ", 40);
                             if ((errs & Win32Com.CE_FRAME) != 0) s = s.Append("Framing,");
@@ -734,11 +738,11 @@ namespace Nefarius.Peripherals.SerialPort
                         uint gotbytes;
                         do
                         {
-                            if (!Win32Com.ReadFile(_hPort, buf, 1, out gotbytes, unmanagedOv))
+                            if (!Win32Com.ReadFile(_hPort.DangerousGetHandle(), buf, 1, out gotbytes, unmanagedOv))
                             {
                                 if (Marshal.GetLastWin32Error() == Win32Com.ERROR_IO_PENDING)
                                 {
-                                    Win32Com.CancelIo(_hPort);
+                                    Win32Com.CancelIo(_hPort.DangerousGetHandle());
                                     gotbytes = 0;
                                 }
                                 else
@@ -762,7 +766,7 @@ namespace Nefarius.Peripherals.SerialPort
                     if (i != 0)
                     {
                         uint f;
-                        if (!Win32Com.GetCommModemStatus(_hPort, out f)) throw new CommPortException("IO Error [005]");
+                        if (!Win32Com.GetCommModemStatus(_hPort.DangerousGetHandle(), out f)) throw new CommPortException("IO Error [005]");
                         OnStatusChange(new ModemStatus(i), new ModemStatus(f));
                     }
                 }
@@ -790,7 +794,7 @@ namespace Nefarius.Peripherals.SerialPort
             if (_online)
             {
                 uint f;
-                if (Win32Com.GetHandleInformation(_hPort, out f)) return true;
+                if (Win32Com.GetHandleInformation(_hPort.DangerousGetHandle(), out f)) return true;
                 ThrowException("Offline");
                 return false;
             }
