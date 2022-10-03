@@ -2,6 +2,7 @@
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading;
+using Nefarius.Peripherals.SerialPort;
 
 namespace PInvokeSerialPort.Test
 {
