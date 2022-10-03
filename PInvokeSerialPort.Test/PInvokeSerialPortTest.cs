@@ -1,21 +1,21 @@
 ﻿using System;
 using System.Text;
-using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading;
 using Nefarius.Peripherals.SerialPort;
 
 namespace PInvokeSerialPort.Test
 {
     /// <summary>
-    ///     Test class.
-    ///     Attention: Run it just in test debug.
+    /// Test class. 
+    /// Attention: Run it just in test debug.
     /// </summary>
     [TestClass]
     public class PInvokeSerialPortTest
     {
-        private dynamic _reciever;
-        private dynamic _sender;
-        private StringBuilder _stringBuilder;
+        dynamic _sender;
+        dynamic _reciever;
+        StringBuilder _stringBuilder;
 
         public void OpenWriteDoWaitClose(Action action)
         {
@@ -25,7 +25,7 @@ namespace PInvokeSerialPort.Test
             _reciever.Open();
 
             action();
-
+            
             _sender.Write(testSting);
             Thread.Sleep(100);
             Assert.AreEqual(testSting, _stringBuilder.ToString());
@@ -40,22 +40,22 @@ namespace PInvokeSerialPort.Test
             _sender = new SerialPort("com1");
             _reciever = new SerialPort("com2");
             OpenWriteDoWaitClose(() =>
-            {
-                ((SerialPort)_reciever).DataReceived += x => _stringBuilder.Append((char)x);
-            });
+                {
+                    ((SerialPort)_reciever).DataReceived += x => _stringBuilder.Append((char)x);
+                });
         }
 
         [TestMethod]
         public void OverallTest2()
         {
             _sender = new System.IO.Ports.SerialPort("com1");
-
+            
             _reciever = new SerialPort("com2");
-
+            
             OpenWriteDoWaitClose(() =>
-            {
-                ((SerialPort)(object)_reciever).DataReceived += x => _stringBuilder.Append((char)x);
-            });
+                {
+                    ((SerialPort)(object)_reciever).DataReceived += x => _stringBuilder.Append((char)x);
+                });
         }
 
         [TestMethod]
@@ -65,10 +65,9 @@ namespace PInvokeSerialPort.Test
             _reciever = new System.IO.Ports.SerialPort("com2");
 
             OpenWriteDoWaitClose(() =>
-            {
-                ((System.IO.Ports.SerialPort)_reciever).DataReceived +=
-                    (x, y) => _stringBuilder.Append(_reciever.ReadExisting());
-            });
+                {
+                    ((System.IO.Ports.SerialPort)_reciever).DataReceived += (x, y) => _stringBuilder.Append(_reciever.ReadExisting());
+                });
         }
 
         [TestMethod]
@@ -76,12 +75,11 @@ namespace PInvokeSerialPort.Test
         {
             _sender = new System.IO.Ports.SerialPort("com1");
             _reciever = new System.IO.Ports.SerialPort("com2");
-
+            
             OpenWriteDoWaitClose(() =>
-            {
-                ((System.IO.Ports.SerialPort)_reciever).DataReceived +=
-                    (x, y) => _stringBuilder.Append(_reciever.ReadExisting());
-            });
+                {
+                    ((System.IO.Ports.SerialPort)_reciever).DataReceived += (x, y) => _stringBuilder.Append(_reciever.ReadExisting());
+                });
         }
     }
 }

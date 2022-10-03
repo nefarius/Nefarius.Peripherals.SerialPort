@@ -8,8 +8,11 @@
     <Product>PInvokeSerialPort.Sample</Product>
     <Copyright>Copyright ©  2012</Copyright>
     <OutputPath>bin\$(Configuration)\</OutputPath>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Nefarius.Peripherals.SerialPort\Nefarius.Peripherals.SerialPort.csproj" />
   </ItemGroup>
+
 </Project>

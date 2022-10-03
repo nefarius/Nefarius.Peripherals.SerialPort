@@ -1,4 +1,4 @@
-﻿CreateFile
+﻿﻿CreateFile
 GetHandleInformation
 SetCommState
 SetCommTimeouts

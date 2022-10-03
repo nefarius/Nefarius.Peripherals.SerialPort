@@ -4,7 +4,7 @@ namespace Nefarius.Peripherals.SerialPort;
 
 internal static class DCBExtensions
 {
-    public static void Init(this DCB dcb, bool parity, bool outCts, bool outDsr, int dtr, bool inDsr, bool txc,
+    public static void Init(this ref DCB dcb, bool parity, bool outCts, bool outDsr, int dtr, bool inDsr, bool txc,
         bool xOut,
         bool xIn, int rts)
     {
