@@ -491,8 +491,6 @@ public sealed class SerialPort : IDisposable
 
         _auto = false;
 
-        Close();
-
         return false;
     }
 
