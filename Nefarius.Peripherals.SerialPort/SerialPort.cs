@@ -9,7 +9,6 @@ using Windows.Win32.Storage.FileSystem;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Peripherals.SerialPort.Win32PInvoke;
 using COMMPROP = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMPROP;
-using COMMTIMEOUTS = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMTIMEOUTS;
 using COMSTAT = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMSTAT;
 using DCB = Windows.Win32.Devices.Communication.DCB;
 
@@ -369,8 +368,8 @@ namespace Nefarius.Peripherals.SerialPort
             commTimeouts.ReadIntervalTimeout = 0;
             commTimeouts.ReadTotalTimeoutConstant = 0;
             commTimeouts.ReadTotalTimeoutMultiplier = 0;
-            commTimeouts.WriteTotalTimeoutConstant = SendTimeoutConstant;
-            commTimeouts.WriteTotalTimeoutMultiplier = SendTimeoutMultiplier;
+            commTimeouts.WriteTotalTimeoutConstant = (uint)SendTimeoutConstant;
+            commTimeouts.WriteTotalTimeoutMultiplier = (uint)SendTimeoutMultiplier;
             portDcb.Init(Parity is Parity.Odd or Parity.Even, TxFlowCts, TxFlowDsr,
                 (int)UseDtr, RxGateDsr, !TxWhenRxXoff, TxFlowX, RxFlowX, (int)UseRts);
             portDcb.BaudRate = (uint)BaudRate;
@@ -383,13 +382,13 @@ namespace Nefarius.Peripherals.SerialPort
             portDcb.XonLim = (ushort)RxLowWater;
 
             if (RxQueue != 0 || TxQueue != 0)
-                if (!Win32Com.SetupComm(_hPort.DangerousGetHandle(), (uint)RxQueue, (uint)TxQueue))
+                if (!PInvoke.SetupComm(_hPort, (uint)RxQueue, (uint)TxQueue))
                     ThrowException("Bad queue settings");
 
             if (!PInvoke.SetCommState(_hPort, portDcb))
                 ThrowException("Bad com settings");
 
-            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts))
+            if (!PInvoke.SetCommTimeouts(_hPort, commTimeouts))
                 ThrowException("Bad timeout settings");
 
             _stateBrk = 0;

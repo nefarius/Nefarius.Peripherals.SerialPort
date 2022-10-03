@@ -5,32 +5,9 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
 {
     internal class Win32Com
     {
-        /// <summary>
-        /// Opening Testing and Closing the Port Handle.
-        /// </summary>
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr CreateFile(String lpFileName, UInt32 dwDesiredAccess, UInt32 dwShareMode,
-                                                 IntPtr lpSecurityAttributes, UInt32 dwCreationDisposition, UInt32 dwFlagsAndAttributes,
-                                                 IntPtr hTemplateFile);
-
         //Constants for errors:
-        internal const UInt32 ERROR_FILE_NOT_FOUND = 2;
-        internal const UInt32 ERROR_INVALID_NAME = 123;
         internal const UInt32 ERROR_ACCESS_DENIED = 5;
         internal const UInt32 ERROR_IO_PENDING = 997;
-
-        //Constants for return value:
-        internal const Int32 INVALID_HANDLE_VALUE = -1;
-
-        //Constants for dwFlagsAndAttributes:
-        internal const UInt32 FILE_FLAG_OVERLAPPED = 0x40000000;
-
-        //Constants for dwCreationDisposition:
-        internal const UInt32 OPEN_EXISTING = 3;
-
-        //Constants for dwDesiredAccess:
-        internal const UInt32 GENERIC_READ = 0x80000000;
-        internal const UInt32 GENERIC_WRITE = 0x40000000;
 
         [DllImport("kernel32.dll")]
         internal static extern Boolean GetHandleInformation(IntPtr hObject, out UInt32 lpdwFlags);
@@ -40,12 +17,6 @@ namespace Nefarius.Peripherals.SerialPort.Win32PInvoke
         /// Manipulating the communications settings.
         /// </summary>
         
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean SetCommTimeouts(IntPtr hFile, [In] ref COMMTIMEOUTS lpCommTimeouts);
-
-        [DllImport("kernel32.dll")]
-        internal static extern Boolean SetupComm(IntPtr hFile, UInt32 dwInQueue, UInt32 dwOutQueue);
-
         /// <summary>
         /// Reading and writing.
         /// </summary>
