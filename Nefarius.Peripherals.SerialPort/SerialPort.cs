@@ -3,9 +3,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Windows.Win32;
+using Windows.Win32.Devices.Communication;
+using Windows.Win32.Foundation;
 using Windows.Win32.Storage.FileSystem;
 using Microsoft.Win32.SafeHandles;
 using Nefarius.Peripherals.SerialPort.Win32PInvoke;
+using COMMPROP = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMPROP;
+using COMMTIMEOUTS = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMMTIMEOUTS;
+using COMSTAT = Nefarius.Peripherals.SerialPort.Win32PInvoke.COMSTAT;
+using DCB = Windows.Win32.Devices.Communication.DCB;
 
 namespace Nefarius.Peripherals.SerialPort
 {
@@ -348,7 +354,7 @@ namespace Nefarius.Peripherals.SerialPort
             var wo = new OVERLAPPED();
 
             if (_online) return false;
-            
+
             _hPort = PInvoke.CreateFile(PortName, FILE_ACCESS_FLAGS.FILE_GENERIC_READ | FILE_ACCESS_FLAGS.FILE_GENERIC_WRITE, 0,
                 null, FILE_CREATION_DISPOSITION.OPEN_EXISTING, FILE_FLAGS_AND_ATTRIBUTES.FILE_FLAG_OVERLAPPED, null);
 
@@ -366,24 +372,24 @@ namespace Nefarius.Peripherals.SerialPort
             commTimeouts.WriteTotalTimeoutConstant = SendTimeoutConstant;
             commTimeouts.WriteTotalTimeoutMultiplier = SendTimeoutMultiplier;
             portDcb.Init(Parity is Parity.Odd or Parity.Even, TxFlowCts, TxFlowDsr,
-                (int) UseDtr, RxGateDsr, !TxWhenRxXoff, TxFlowX, RxFlowX, (int) UseRts);
-            portDcb.BaudRate = BaudRate;
-            portDcb.ByteSize = (byte) DataBits;
-            portDcb.Parity = (byte) Parity;
-            portDcb.StopBits = (byte) StopBits;
-            portDcb.XoffChar = (byte) XoffChar;
-            portDcb.XonChar = (byte) XonChar;
-            portDcb.XoffLim = (short) RxHighWater;
-            portDcb.XonLim = (short) RxLowWater;
+                (int)UseDtr, RxGateDsr, !TxWhenRxXoff, TxFlowX, RxFlowX, (int)UseRts);
+            portDcb.BaudRate = (uint)BaudRate;
+            portDcb.ByteSize = (byte)DataBits;
+            portDcb.Parity = (DCB_PARITY)Parity;
+            portDcb.StopBits = (DCB_STOP_BITS)StopBits;
+            portDcb.XoffChar = (CHAR)(byte)XoffChar;
+            portDcb.XonChar = (CHAR)(byte)XonChar;
+            portDcb.XoffLim = (ushort)RxHighWater;
+            portDcb.XonLim = (ushort)RxLowWater;
 
             if (RxQueue != 0 || TxQueue != 0)
-                if (!Win32Com.SetupComm(_hPort.DangerousGetHandle(), (uint) RxQueue, (uint) TxQueue))
+                if (!Win32Com.SetupComm(_hPort.DangerousGetHandle(), (uint)RxQueue, (uint)TxQueue))
                     ThrowException("Bad queue settings");
-            
-            if (!Win32Com.SetCommState(_hPort.DangerousGetHandle(), ref portDcb)) 
+
+            if (!PInvoke.SetCommState(_hPort, portDcb))
                 ThrowException("Bad com settings");
-            
-            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts)) 
+
+            if (!Win32Com.SetCommTimeouts(_hPort.DangerousGetHandle(), ref commTimeouts))
                 ThrowException("Bad timeout settings");
 
             _stateBrk = 0;
@@ -417,13 +423,15 @@ namespace Nefarius.Peripherals.SerialPort
 
             _rxException = null;
             _rxExceptionReported = false;
-            
+
             // TODO: utilize Task Parallel Library here
             _rxThread = new Thread(ReceiveThread)
             {
-                Name = "CommBaseRx", Priority = ThreadPriority.AboveNormal, IsBackground = true
+                Name = "CommBaseRx",
+                Priority = ThreadPriority.AboveNormal,
+                IsBackground = true
             };
-            
+
             _rxThread.Start();
             Thread.Sleep(1); //Give rx thread time to start. By documentation, 0 should work, but it does not!
 
@@ -514,9 +522,9 @@ namespace Nefarius.Peripherals.SerialPort
             CheckOnline();
             CheckResult();
             _writeCount = toSend.GetLength(0);
-            if (Win32Com.WriteFile(_hPort.DangerousGetHandle(), toSend, (uint) _writeCount, out sent, _ptrUwo))
+            if (Win32Com.WriteFile(_hPort.DangerousGetHandle(), toSend, (uint)_writeCount, out sent, _ptrUwo))
             {
-                _writeCount -= (int) sent;
+                _writeCount -= (int)sent;
             }
             else
             {
@@ -568,7 +576,7 @@ namespace Nefarius.Peripherals.SerialPort
             uint sent;
             if (Win32Com.GetOverlappedResult(_hPort.DangerousGetHandle(), _ptrUwo, out sent, _checkSends))
             {
-                _writeCount -= (int) sent;
+                _writeCount -= (int)sent;
                 if (_writeCount != 0) ThrowException("Send Timeout");
             }
             else
@@ -718,7 +726,7 @@ namespace Nefarius.Peripherals.SerialPort
                             throw new CommPortException("IO Error [002]");
                     }
 
-                    eventMask = (uint) Marshal.ReadInt32(uMask);
+                    eventMask = (uint)Marshal.ReadInt32(uMask);
                     if ((eventMask & Win32Com.EV_ERR) != 0)
                     {
                         uint errs;
